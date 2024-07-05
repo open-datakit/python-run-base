@@ -53,7 +53,9 @@ def main():
     # TODO Validate arguments against algorithm interface here
 
     # Load argument values
-    arguments_resource = load_json(ARGUMENTS_PATH + arguments_name + ".json")
+    arguments_resource = load_json(
+        ARGUMENTS_PATH + algorithm_name + "." + arguments_name + ".json"
+    )
 
     # Populate dict of key: value argument pairs to pass to function
     kwargs = {}
@@ -164,7 +166,7 @@ def main():
 
     # Save updated arguments resource
     save_json(
-        path=ARGUMENTS_PATH + arguments_name + ".json",
+        path=ARGUMENTS_PATH + algorithm_name + "." + arguments_name + ".json",
         value=arguments_resource,
     )
 
