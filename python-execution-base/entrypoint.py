@@ -5,6 +5,7 @@ from opendatafit.resources import TabularDataResource
 from importlib.machinery import SourceFileLoader
 
 
+# Datapackage is mounted at /datapackage in container definition
 DATAPACKAGE_PATH = os.getcwd() + "/datapackage/"
 RESOURCES_PATH = DATAPACKAGE_PATH + "resources/"
 METASCHEMAS_PATH = DATAPACKAGE_PATH + "metaschemas/"
