@@ -7,12 +7,12 @@ from importlib.machinery import SourceFileLoader
 
 
 # Datapackage is mounted at /datapackage in container definition
-DATAPACKAGE_PATH = os.getcwd() + "/datapackage/"
-RESOURCES_PATH = DATAPACKAGE_PATH + "resources/"
-METASCHEMAS_PATH = DATAPACKAGE_PATH + "metaschemas/"
-ALGORITHMS_PATH = DATAPACKAGE_PATH + "algorithms/"
-ARGUMENTS_PATH = DATAPACKAGE_PATH + "arguments/"
-VIEWS_PATH = DATAPACKAGE_PATH + "views/"
+DATAPACKAGE_PATH = os.getcwd() + "/datapackage"
+RESOURCES_PATH = DATAPACKAGE_PATH + "/resources"
+METASCHEMAS_PATH = DATAPACKAGE_PATH + "/metaschemas"
+ALGORITHMS_PATH = DATAPACKAGE_PATH + "/algorithms"
+ARGUMENTS_PATH = DATAPACKAGE_PATH + "/arguments"
+VIEWS_PATH = DATAPACKAGE_PATH + "/views"
 
 
 # Helpers
@@ -53,7 +53,7 @@ def execute():
 
     # Load argument values
     arguments_resource = load_json(
-        ARGUMENTS_PATH + algorithm_name + "." + arguments_name + ".json"
+        f"{ARGUMENTS_PATH}/{algorithm_name}.{arguments_name}.json"
     )
 
     # Populate dict of key: value argument pairs to pass to function
@@ -65,7 +65,7 @@ def execute():
             kwargs[name] = arg["value"]
         elif "resource" in arg:
             resource_name = arg["resource"]
-            resource_path = RESOURCES_PATH + resource_name + ".json"
+            resource_path = f"{RESOURCES_PATH}/{resource_name}.json"
 
             # Load resource JSON
             resource = load_json(resource_path)
@@ -79,7 +79,7 @@ def execute():
                 # TODO: Should this be done in TabularDataResource?
                 try:
                     metaschema_path = (
-                        METASCHEMAS_PATH + arg["metaschema"] + ".json"
+                        f"{METASCHEMAS_PATH}/{arg['metaschema']}.json"
                     )
                     resource["metaschema"] = load_json(metaschema_path)[
                         "schema"
@@ -117,7 +117,7 @@ def execute():
     # Import as "algorithm_module" here to avoid clashing with any library
     # names (e.g. bindfit.py algorithm vs. bindfit library)
     algorithm_module = SourceFileLoader(
-        "algorithm_module", ALGORITHMS_PATH + algorithm_name + ".py"
+        "algorithm_module", f"{ALGORITHMS_PATH}/{algorithm_name}.py"
     ).load_module()
 
     # Execute algorithm with kwargs
@@ -145,7 +145,7 @@ def execute():
 
                 # Load original resource JSON to check schema location
                 resource_name = arg["resource"]
-                resource_path = RESOURCES_PATH + resource_name + ".json"
+                resource_path = f"{RESOURCES_PATH}/{resource_name}.json"
                 resource = load_json(resource_path)
 
                 if resource["schema"] == "metaschema":
@@ -165,7 +165,7 @@ def execute():
 
     # Save updated arguments resource
     save_json(
-        path=ARGUMENTS_PATH + algorithm_name + "." + arguments_name + ".json",
+        path=f"{ARGUMENTS_PATH}/{algorithm_name}.{arguments_name}.json",
         value=arguments_resource,
     )
 
@@ -217,8 +217,6 @@ def view():
         print(f"Saving object at {figpath}.p")
         with open(f"{figpath}.p", "wb") as f:
             pickle.dump(fig, f)
-
-        # TODO: Fix slash situation - change all other paths to match these
 
 
 if __name__ == "__main__":
