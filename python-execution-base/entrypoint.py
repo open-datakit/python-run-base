@@ -1,5 +1,6 @@
 import json
 import os
+import pickle
 from copy import deepcopy
 from opendatafit.resources import TabularDataResource
 from importlib.machinery import SourceFileLoader
@@ -11,6 +12,7 @@ RESOURCES_PATH = DATAPACKAGE_PATH + "resources/"
 METASCHEMAS_PATH = DATAPACKAGE_PATH + "metaschemas/"
 ALGORITHMS_PATH = DATAPACKAGE_PATH + "algorithms/"
 ARGUMENTS_PATH = DATAPACKAGE_PATH + "arguments/"
+VIEWS_PATH = DATAPACKAGE_PATH + "views/"
 
 
 # Helpers
@@ -26,15 +28,12 @@ def save_json(path, value):
         json.dump(value, f, indent=2)
 
 
-def main():
+def execute():
     """Execute algorithm with specified container and argument resource"""
 
-    # Load requested execution parameters from env vars
-    if "ALGORITHM" in os.environ:
-        algorithm_name = os.environ.get("ALGORITHM")
-    else:
-        raise ValueError("ALGORITHM environment variable missing")
+    algorithm_name = os.environ.get("ALGORITHM")
 
+    # Load requested execution parameters from env vars
     if "CONTAINER" in os.environ:
         container_name = os.environ.get("CONTAINER")
     else:
@@ -171,5 +170,63 @@ def main():
     )
 
 
+def view():
+    """Render view in specified container"""
+    view_name = os.environ.get("VIEW")
+
+    # Load view
+    with open(f"{VIEWS_PATH}/{view_name}.json", "r") as f:
+        view = json.load(f)
+
+    # Load associated resources
+
+    # TODO: Think about rewriting TabularDataResource to do handling of
+    # metaschemas and validation that entrypoint does so we don't have to
+    # redo it here
+
+    # TODO: Handle single resource case
+
+    resources = {}
+
+    for resource_name in view["resources"]:
+        # Load resource into TabularDataResource object
+        with open(f"{RESOURCES_PATH}/{resource_name}.json", "r") as f:
+            resource = json.load(f)
+            # TODO: Temporary, populate "metaschema" key to avoid emtpy
+            # metaschema error - we don't need it for this
+            # This will go away when we handle metaschemas and validation
+            # inside the object
+            resource["metaschema"] = {"hello": "world"}
+            resources[resource_name] = TabularDataResource(resource=resource)
+
+    if view["specType"] == "matplotlib":
+        # Import matplotlib module
+        matplotlib_module = SourceFileLoader(
+            "matplotlib_module", f"{VIEWS_PATH}/{view['specFile']}"
+        ).load_module()
+
+        # Pass resources and execute
+        fig = matplotlib_module.main(**resources)
+
+        # Save figure
+        figpath = f"{VIEWS_PATH}/{view_name}"
+
+        print(f"Saving image at {figpath}.png")
+        fig.savefig(f"{figpath}.png")
+
+        print(f"Saving object at {figpath}.p")
+        with open(f"{figpath}.p", "wb") as f:
+            pickle.dump(fig, f)
+
+        # TODO: Fix slash situation - change all other paths to match these
+
+
 if __name__ == "__main__":
-    main()
+    if "ALGORITHM" in os.environ:
+        execute()
+    elif "VIEW" in os.environ:
+        view()
+    else:
+        raise ValueError(
+            "Must provide either ALGORITHM or VIEW environment variables"
+        )
