@@ -74,7 +74,10 @@ def execute():
             if resource is None:
                 raise ValueError("Tried to load an empty resource")
 
-            if resource["profile"] == "tabular-data-resource":
+            if (
+                resource["profile"] == "tabular-data-resource"
+                or resource["profile"] == "parameter-tabular-data-resource"
+            ):
                 # Load tabular data resource metaschema
                 # TODO: Should this be done in TabularDataResource?
                 try:
@@ -108,7 +111,10 @@ def execute():
                     resource["schema"] = schema
 
             # Load resource into algorithm kwargs in required format
-            if resource["profile"] == "tabular-data-resource":
+            if (
+                resource["profile"] == "tabular-data-resource"
+                or resource["profile"] == "parameter-tabular-data-resource"
+            ):
                 kwargs[name] = TabularDataResource(resource=resource)
             else:
                 kwargs[name] = resource
