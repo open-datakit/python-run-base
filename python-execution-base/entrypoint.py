@@ -55,8 +55,6 @@ def execute():
     # Populate dict of key: value argument pairs to pass to function
     kwargs = {}
 
-    # TODO: Merge this whole thing into the load_resource_by_argument function
-
     for argument in argument_space["data"]:
         argument_name = argument["name"]
 
@@ -83,18 +81,16 @@ def execute():
     result: dict = algorithm_module.main(**kwargs)
 
     # Populate argument resource with outputs and save
-    for arg in argument_space["data"]:
-        if arg["name"] in result.keys():
-            # TODO: Write write_argument function to help with this
-
+    for argument in argument_space["data"]:
+        if argument["name"] in result.keys():
             # Update argument value/resource with algorithm output
-            if "value" in arg:
+            if "value" in argument:
                 # Arg is a simple value
-                arg["value"] = result[arg["name"]]
-            elif "resource" in arg:
+                argument["value"] = result[argument["name"]]
+            elif "resource" in argument:
                 # Arg is a resource, update the associated resource file
                 # Get result resource
-                updated_resource = result[arg["name"]].to_dict()
+                updated_resource = result[argument["name"]].to_dict()
 
                 # TODO: Validate updated_resource here - check it's a valid
                 # resource of the type specified
