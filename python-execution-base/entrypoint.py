@@ -1,8 +1,8 @@
 import json
 import os
 import pickle
-from copy import deepcopy
 from opendatafit.resources import TabularDataResource
+from opendatafit.datapackage import load_resource_by_argument, write_resource
 from importlib.machinery import SourceFileLoader
 
 
@@ -40,7 +40,7 @@ def execute():
         raise ValueError("CONTAINER environment variable missing")
 
     if "ARGUMENTS" in os.environ:
-        arguments_name = os.environ.get("ARGUMENTS")
+        argument_space_name = os.environ.get("ARGUMENTS")
     else:
         # TODO: Get this from the algorithm
         raise NotImplementedError(
@@ -52,72 +52,29 @@ def execute():
     # TODO Validate arguments against algorithm interface here
 
     # Load argument values
-    arguments_resource = load_json(
-        f"{ARGUMENTS_PATH}/{algorithm_name}.{arguments_name}.json"
+    argument_space = load_json(
+        f"{ARGUMENTS_PATH}/{algorithm_name}.{argument_space_name}.json"
     )
 
     # Populate dict of key: value argument pairs to pass to function
     kwargs = {}
 
-    for arg in arguments_resource["data"]:
-        name = arg["name"]
-        if "value" in arg:
-            kwargs[name] = arg["value"]
-        elif "resource" in arg:
-            resource_name = arg["resource"]
-            resource_path = f"{RESOURCES_PATH}/{resource_name}.json"
+    # TODO: Merge this whole thing into the load_resource_by_argument function
 
-            # Load resource JSON
-            resource = load_json(resource_path)
+    for argument in argument_space["data"]:
+        argument_name = argument["name"]
 
-            # Check resource is populated
-            if resource is None:
-                raise ValueError("Tried to load an empty resource")
-
-            if (
-                resource["profile"] == "tabular-data-resource"
-                or resource["profile"] == "parameter-tabular-data-resource"
-            ):
-                # Load tabular data resource metaschema
-                # TODO: Should this be done in TabularDataResource?
-                try:
-                    metaschema_path = (
-                        f"{METASCHEMAS_PATH}/{arg['metaschema']}.json"
-                    )
-                    resource["metaschema"] = load_json(metaschema_path)[
-                        "schema"
-                    ]
-                except KeyError:
-                    raise KeyError(
-                        (
-                            "Argument for tabular data resource {}"
-                            "does not specify metaschema"
-                        ).format(resource["name"]),
-                    )
-
-                # Populate schema from metaschema if specified
-                # TODO: Should this be done in TabularDataResource?
-                if resource["schema"] == "metaschema":
-                    schema = deepcopy(resource["metaschema"])
-
-                    # Remove index from fields
-                    fields = []
-                    for field in schema["fields"]:
-                        del field["index"]
-                        fields.append(field)
-
-                    schema["fields"] = fields
-
-                    resource["schema"] = schema
-
-            # Load resource into algorithm kwargs in required format
-            if (
-                resource["profile"] == "tabular-data-resource"
-                or resource["profile"] == "parameter-tabular-data-resource"
-            ):
-                kwargs[name] = TabularDataResource(resource=resource)
-            else:
-                kwargs[name] = resource
+        if "value" in argument:
+            # Argument is a simple value
+            kwargs[argument_name] = argument["value"]
+        elif "resource" in argument:
+            # Argument is a resource
+            kwargs[argument_name] = load_resource_by_argument(
+                algorithm_name,
+                argument_name,
+                argument_space_name,
+                base_path=DATAPACKAGE_PATH,
+            )
 
     # Import algorithm module
     # Import as "algorithm_module" here to avoid clashing with any library
@@ -130,8 +87,10 @@ def execute():
     result: dict = algorithm_module.main(**kwargs)
 
     # Populate argument resource with outputs and save
-    for arg in arguments_resource["data"]:
+    for arg in argument_space["data"]:
         if arg["name"] in result.keys():
+            # TODO: Write write_argument function to help with this
+
             # Update argument value/resource with algorithm output
             if "value" in arg:
                 # Arg is a simple value
@@ -144,35 +103,18 @@ def execute():
                 # TODO: Validate updated_resource here - check it's a valid
                 # resource of the type specified
 
-                # Remove metaschema
-                # TODO: Should we be adding/removing metaschemas inside
-                # TabularDataResource object?
-                updated_resource.pop("metaschema")
-
-                # Load original resource JSON to check schema location
-                resource_name = arg["resource"]
-                resource_path = f"{RESOURCES_PATH}/{resource_name}.json"
-                resource = load_json(resource_path)
-
-                if resource["schema"] == "metaschema":
-                    # External schema - preserve original value
-                    updated_resource["schema"] = resource["schema"]
-
-                save_json(
-                    path=resource_path,
-                    value=updated_resource,
-                )
+                write_resource(updated_resource, base_path=DATAPACKAGE_PATH)
 
     # Update arguments resource metadata from environment variables
-    arguments_resource["algorithm"] = algorithm_name
-    arguments_resource["container"] = container_name
+    argument_space["algorithm"] = algorithm_name
+    argument_space["container"] = container_name
 
     # # TODO Validate argument outputs against algorithm interface
 
     # Save updated arguments resource
     save_json(
-        path=f"{ARGUMENTS_PATH}/{algorithm_name}.{arguments_name}.json",
-        value=arguments_resource,
+        path=f"{ARGUMENTS_PATH}/{algorithm_name}.{argument_space_name}.json",
+        value=argument_space,
     )
 
 
