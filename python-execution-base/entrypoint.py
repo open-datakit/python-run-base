@@ -7,30 +7,21 @@ from opendatafit.datapackage import (
     write_resource,
     load_argument_space,
     write_argument_space,
+    RESOURCES_DIR,
+    ALGORITHMS_DIR,
+    VIEWS_DIR,
 )
 from importlib.machinery import SourceFileLoader
 
 
 # Datapackage is mounted at /datapackage in container definition
 DATAPACKAGE_PATH = os.getcwd() + "/datapackage"
-RESOURCES_PATH = DATAPACKAGE_PATH + "/resources"
-METASCHEMAS_PATH = DATAPACKAGE_PATH + "/metaschemas"
-ALGORITHMS_PATH = DATAPACKAGE_PATH + "/algorithms"
-ARGUMENTS_PATH = DATAPACKAGE_PATH + "/arguments"
-VIEWS_PATH = DATAPACKAGE_PATH + "/views"
+resources_path = f"{DATAPACKAGE_PATH}/{RESOURCES_DIR}"
+algorithms_path = f"{DATAPACKAGE_PATH}/{ALGORITHMS_DIR}"
+views_path = f"{DATAPACKAGE_PATH}/{VIEWS_DIR}"
 
 
 # Helpers
-
-
-def load_json(path):
-    with open(path, "r") as f:
-        return json.load(f)
-
-
-def save_json(path, value):
-    with open(path, "w") as f:
-        json.dump(value, f, indent=2)
 
 
 def execute():
@@ -53,7 +44,7 @@ def execute():
         )
 
     # Load algorithm
-    # algorithm = load_json(ALGORITHMS_PATH + algorithm_name + ".json")
+    # algorithm = load_json(algorithms_path + algorithm_name + ".json")
     # TODO Validate arguments against algorithm interface here
 
     # Load argument values
@@ -85,7 +76,7 @@ def execute():
     # Import as "algorithm_module" here to avoid clashing with any library
     # names (e.g. bindfit.py algorithm vs. bindfit library)
     algorithm_module = SourceFileLoader(
-        "algorithm_module", f"{ALGORITHMS_PATH}/{algorithm_name}.py"
+        "algorithm_module", f"{algorithms_path}/{algorithm_name}.py"
     ).load_module()
 
     # Execute algorithm with kwargs
@@ -125,7 +116,7 @@ def view():
     view_name = os.environ.get("VIEW")
 
     # Load view
-    with open(f"{VIEWS_PATH}/{view_name}.json", "r") as f:
+    with open(f"{views_path}/{view_name}.json", "r") as f:
         view = json.load(f)
 
     # Load associated resources
@@ -140,7 +131,7 @@ def view():
 
     for resource_name in view["resources"]:
         # Load resource into TabularDataResource object
-        with open(f"{RESOURCES_PATH}/{resource_name}.json", "r") as f:
+        with open(f"{resources_path}/{resource_name}.json", "r") as f:
             resource = json.load(f)
             # TODO: Temporary, populate "metaschema" key to avoid emtpy
             # metaschema error - we don't need it for this
@@ -152,14 +143,14 @@ def view():
     if view["specType"] == "matplotlib":
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
-            "matplotlib_module", f"{VIEWS_PATH}/{view['specFile']}"
+            "matplotlib_module", f"{views_path}/{view['specFile']}"
         ).load_module()
 
         # Pass resources and execute
         fig = matplotlib_module.main(**resources)
 
         # Save figure
-        figpath = f"{VIEWS_PATH}/{view_name}"
+        figpath = f"{views_path}/{view_name}"
 
         print(f"Saving image at {figpath}.png")
         fig.savefig(f"{figpath}.png")
