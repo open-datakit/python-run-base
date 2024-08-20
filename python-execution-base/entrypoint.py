@@ -2,7 +2,12 @@ import json
 import os
 import pickle
 from opendatafit.resources import TabularDataResource
-from opendatafit.datapackage import load_resource_by_argument, write_resource
+from opendatafit.datapackage import (
+    load_resource_by_argument,
+    write_resource,
+    load_argument_space,
+    write_argument_space,
+)
 from importlib.machinery import SourceFileLoader
 
 
@@ -52,8 +57,8 @@ def execute():
     # TODO Validate arguments against algorithm interface here
 
     # Load argument values
-    argument_space = load_json(
-        f"{ARGUMENTS_PATH}/{algorithm_name}.{argument_space_name}.json"
+    argument_space = load_argument_space(
+        algorithm_name, argument_space_name, base_path=DATAPACKAGE_PATH
     )
 
     # Populate dict of key: value argument pairs to pass to function
@@ -112,10 +117,7 @@ def execute():
     # # TODO Validate argument outputs against algorithm interface
 
     # Save updated arguments resource
-    save_json(
-        path=f"{ARGUMENTS_PATH}/{algorithm_name}.{argument_space_name}.json",
-        value=argument_space,
-    )
+    write_argument_space(argument_space, base_path=DATAPACKAGE_PATH)
 
 
 def view():
