@@ -1,9 +1,9 @@
 import json
 import os
 import pickle
-from opendatafit.resources import TabularDataResource
 from opendatafit.datapackage import (
     load_resource_by_argument,
+    load_resource,
     write_resource,
     load_argument_space,
     write_argument_space,
@@ -116,25 +116,15 @@ def view():
         view = json.load(f)
 
     # Load associated resources
-
-    # TODO: Think about rewriting TabularDataResource to do handling of
-    # metaschemas and validation that entrypoint does so we don't have to
-    # redo it here
+    resources = {}
 
     # TODO: Handle single resource case
 
-    resources = {}
-
     for resource_name in view["resources"]:
         # Load resource into TabularDataResource object
-        with open(f"{resources_path}/{resource_name}.json", "r") as f:
-            resource = json.load(f)
-            # TODO: Temporary, populate "metaschema" key to avoid emtpy
-            # metaschema error - we don't need it for this
-            # This will go away when we handle metaschemas and validation
-            # inside the object
-            resource["metaschema"] = {"hello": "world"}
-            resources[resource_name] = TabularDataResource(resource=resource)
+        resources[resource_name] = load_resource(
+            resource_name, base_path=DATAPACKAGE_PATH
+        )
 
     if view["specType"] == "matplotlib":
         # Import matplotlib module
