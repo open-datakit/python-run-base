@@ -1,1 +1,1 @@
-opendatafit @ git+https://github.com/opendatafit/opendatafit@main
+opendatapy @ git+https://github.com/opendatastudio/opendatapy@main
