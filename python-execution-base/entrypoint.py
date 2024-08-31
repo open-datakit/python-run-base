@@ -30,18 +30,10 @@ def execute():
     algorithm_name = os.environ.get("ALGORITHM")
 
     # Load requested execution parameters from env vars
-    if "CONTAINER" in os.environ:
-        container_name = os.environ.get("CONTAINER")
+    if "ARGUMENT_SPACE" in os.environ:
+        argument_space_name = os.environ.get("ARGUMENT_SPACE")
     else:
-        raise ValueError("CONTAINER environment variable missing")
-
-    if "ARGUMENTS" in os.environ:
-        argument_space_name = os.environ.get("ARGUMENTS")
-    else:
-        # TODO: Get this from the algorithm
-        raise NotImplementedError(
-            "Populating arguments from algorithm not yet implemented"
-        )
+        raise ValueError("ARGUMENT_SPACE environment variable missing")
 
     # Load algorithm
     # algorithm = load_json(algorithms_path + algorithm_name + ".json")
@@ -96,10 +88,6 @@ def execute():
                 # resource of the type specified
 
                 write_resource(updated_resource, base_path=DATAPACKAGE_PATH)
-
-    # Update arguments resource metadata from environment variables
-    argument_space["algorithm"] = algorithm_name
-    argument_space["container"] = container_name
 
     # # TODO Validate argument outputs against algorithm interface
 
