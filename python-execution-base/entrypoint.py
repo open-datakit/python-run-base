@@ -1,7 +1,7 @@
 import json
 import os
 import pickle
-from opendatafit.datapackage import (
+from opendatapy.datapackage import (
     load_resource_by_argument,
     load_resource,
     write_resource,
