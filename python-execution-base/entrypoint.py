@@ -2,11 +2,11 @@ import json
 import os
 import pickle
 from opendatapy.datapackage import (
-    load_resource_by_argument,
+    load_resource_by_variable,
     load_resource,
     write_resource,
-    load_argument_space,
-    write_argument_space,
+    load_configuration,
+    write_configuration,
     RESOURCES_DIR,
     ALGORITHMS_DIR,
     VIEWS_DIR,
@@ -25,40 +25,40 @@ views_path = f"{DATAPACKAGE_PATH}/{VIEWS_DIR}"
 
 
 def execute():
-    """Execute algorithm with specified container and argument resource"""
-
-    algorithm_name = os.environ.get("ALGORITHM")
+    """Execute algorithm with specified configuration"""
 
     # Load requested execution parameters from env vars
-    if "ARGUMENT_SPACE" in os.environ:
-        argument_space_name = os.environ.get("ARGUMENT_SPACE")
+    if "CONFIGURATION" in os.environ:
+        configuration_name = os.environ.get("CONFIGURATION")
     else:
-        raise ValueError("ARGUMENT_SPACE environment variable missing")
+        raise ValueError("CONFIGURATION environment variable missing")
+
+    # Get algorithm name from configuration
+    algorithm_name = configuration_name.split(".")[0]
 
     # Load algorithm
     # algorithm = load_json(algorithms_path + algorithm_name + ".json")
-    # TODO Validate arguments against algorithm interface here
+    # TODO Validate configuration variables against algorithm signature here
 
-    # Load argument values
-    argument_space = load_argument_space(
-        algorithm_name, argument_space_name, base_path=DATAPACKAGE_PATH
+    # Load configuration
+    configuration = load_configuration(
+        configuration_name, base_path=DATAPACKAGE_PATH
     )
 
-    # Populate dict of key: value argument pairs to pass to function
+    # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
 
-    for argument in argument_space["data"]:
-        argument_name = argument["name"]
+    for variable in configuration["data"]:
+        variable_name = variable["name"]
 
-        if "value" in argument:
-            # Argument is a simple value
-            kwargs[argument_name] = argument["value"]
-        elif "resource" in argument:
-            # Argument is a resource
-            kwargs[argument_name] = load_resource_by_argument(
-                algorithm_name,
-                argument_name,
-                argument_space_name,
+        if "value" in variable:
+            # Variable is a simple value
+            kwargs[variable_name] = variable["value"]
+        elif "resource" in variable:
+            # Variable is a resource
+            kwargs[variable_name] = load_resource_by_variable(
+                variable_name,
+                configuration_name,
                 base_path=DATAPACKAGE_PATH,
             )
 
@@ -72,27 +72,28 @@ def execute():
     # Execute algorithm with kwargs
     result: dict = algorithm_module.main(**kwargs)
 
-    # Populate argument resource with outputs and save
-    for argument in argument_space["data"]:
-        if argument["name"] in result.keys():
-            # Update argument value/resource with algorithm output
-            if "value" in argument:
-                # Arg is a simple value
-                argument["value"] = result[argument["name"]]
-            elif "resource" in argument:
-                # Arg is a resource, update the associated resource file
+    # Populate configuration resource with outputs and save
+    for variable in configuration["data"]:
+        if variable["name"] in result.keys():
+            # Update variable value or resource with algorithm output
+            if "value" in variable:
+                # Variable is a simple value
+                variable["value"] = result[variable["name"]]
+            elif "resource" in variable:
+                # Variable is a resource, update the associated resource file
                 # Get result resource
-                updated_resource = result[argument["name"]].to_dict()
+                updated_resource = result[variable["name"]].to_dict()
 
                 # TODO: Validate updated_resource here - check it's a valid
                 # resource of the type specified
 
                 write_resource(updated_resource, base_path=DATAPACKAGE_PATH)
 
-    # # TODO Validate argument outputs against algorithm interface
+    # TODO: Validate outputs against algorithm signature - make sure they are
+    # the right types
 
-    # Save updated arguments resource
-    write_argument_space(argument_space, base_path=DATAPACKAGE_PATH)
+    # Save updated configuration
+    write_configuration(configuration, base_path=DATAPACKAGE_PATH)
 
 
 def view():
@@ -135,11 +136,11 @@ def view():
 
 
 if __name__ == "__main__":
-    if "ALGORITHM" in os.environ:
+    if "CONFIGURATION" in os.environ:
         execute()
     elif "VIEW" in os.environ:
         view()
     else:
         raise ValueError(
-            "Must provide either ALGORITHM or VIEW environment variables"
+            "Must provide either CONFIGURATION or VIEW environment variables"
         )
