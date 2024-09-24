@@ -5,8 +5,8 @@ from opendatapy.datapackage import (
     load_resource_by_variable,
     load_resource,
     write_resource,
-    load_configuration,
-    write_configuration,
+    load_run_configuration,
+    write_run_configuration,
     RESOURCES_DIR,
     ALGORITHMS_DIR,
     VIEWS_DIR,
@@ -25,30 +25,28 @@ views_path = f"{DATAPACKAGE_PATH}/{VIEWS_DIR}"
 
 
 def execute():
-    """Execute algorithm with specified configuration"""
+    """Execute the specified run"""
 
     # Load requested execution parameters from env vars
-    if "CONFIGURATION" in os.environ:
-        configuration_name = os.environ.get("CONFIGURATION")
+    if "RUN" in os.environ:
+        run_name = os.environ.get("RUN")
     else:
-        raise ValueError("CONFIGURATION environment variable missing")
+        raise ValueError("RUN environment variable missing")
 
-    # Get algorithm name from configuration
-    algorithm_name = configuration_name.split(".")[0]
+    # Get algorithm name from run
+    algorithm_name = run_name.split(".")[0]
 
     # Load algorithm
     # algorithm = load_json(algorithms_path + algorithm_name + ".json")
-    # TODO Validate configuration variables against algorithm signature here
+    # TODO Validate run config variables against algorithm signature here
 
-    # Load configuration
-    configuration = load_configuration(
-        configuration_name, base_path=DATAPACKAGE_PATH
-    )
+    # Load run configuration
+    run = load_run_configuration(run_name, base_path=DATAPACKAGE_PATH)
 
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
 
-    for variable in configuration["data"]:
+    for variable in run["data"]:
         variable_name = variable["name"]
 
         if "value" in variable:
@@ -57,8 +55,8 @@ def execute():
         elif "resource" in variable:
             # Variable is a resource
             kwargs[variable_name] = load_resource_by_variable(
-                variable_name,
-                configuration_name,
+                run_name=run_name,
+                variable_name=variable_name,
                 base_path=DATAPACKAGE_PATH,
             )
 
@@ -72,8 +70,8 @@ def execute():
     # Execute algorithm with kwargs
     result: dict = algorithm_module.main(**kwargs)
 
-    # Populate configuration resource with outputs and save
-    for variable in configuration["data"]:
+    # Populate run configuration with outputs and save
+    for variable in run["data"]:
         if variable["name"] in result.keys():
             # Update variable value or resource with algorithm output
             if "value" in variable:
@@ -92,8 +90,8 @@ def execute():
     # TODO: Validate outputs against algorithm signature - make sure they are
     # the right types
 
-    # Save updated configuration
-    write_configuration(configuration, base_path=DATAPACKAGE_PATH)
+    # Save updated run configuration
+    write_run_configuration(run, base_path=DATAPACKAGE_PATH)
 
 
 def view():
@@ -136,11 +134,11 @@ def view():
 
 
 if __name__ == "__main__":
-    if "CONFIGURATION" in os.environ:
+    if "RUN" in os.environ:
         execute()
     elif "VIEW" in os.environ:
         view()
     else:
         raise ValueError(
-            "Must provide either CONFIGURATION or VIEW environment variables"
+            "Must provide either RUN or VIEW environment variables"
         )
