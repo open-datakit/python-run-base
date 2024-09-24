@@ -1,14 +1,15 @@
 import os
 import pickle
 from opendatapy.datapackage import (
-    get_algorithm_name,
     load_resource_by_variable,
     load_resource,
     write_resource,
     load_run_configuration,
     write_run_configuration,
     load_view,
-    view_file_path,
+    views_path,
+    view_artefacts_path,
+    get_algorithm_name,
 )
 from importlib.machinery import SourceFileLoader
 
@@ -98,7 +99,6 @@ def view():
     """Render view in specified container"""
     view_name = os.environ.get("VIEW")
     run_name = os.environ.get("RUN")
-    algorithm_name = get_algorithm_name(run_name)
 
     # Load view
     view = load_view(
@@ -122,21 +122,23 @@ def view():
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
             "matplotlib_module",
-            view_file_path.format(
+            views_path.format(
                 base_path=DATAPACKAGE_PATH,
-                algorithm_name=algorithm_name,
-                view_file_name=view["specFile"],
-            ),
+                algorithm_name=get_algorithm_name(run_name),
+            )
+            + f"/{view['specFile']}",
         ).load_module()
 
         # Pass resources and execute
         fig = matplotlib_module.main(**resources)
 
         # Save figure
-        figpath = view_file_path.format(
-            base_path=DATAPACKAGE_PATH,
-            algorithm_name=algorithm_name,
-            view_file_name=view_name,
+        figpath = (
+            view_artefacts_path.format(
+                base_path=DATAPACKAGE_PATH,
+                run_name=run_name,
+            )
+            + f"/{view_name}"
         )
 
         print(f"Saving image at {figpath}.png")
