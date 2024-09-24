@@ -1,12 +1,14 @@
-import json
 import os
 import pickle
 from opendatapy.datapackage import (
+    get_algorithm_name,
     load_resource_by_variable,
     load_resource,
     write_resource,
     load_run_configuration,
     write_run_configuration,
+    load_view,
+    view_file_path,
 )
 from importlib.machinery import SourceFileLoader
 
@@ -95,10 +97,13 @@ def execute():
 def view():
     """Render view in specified container"""
     view_name = os.environ.get("VIEW")
+    run_name = os.environ.get("RUN")
+    algorithm_name = get_algorithm_name(run_name)
 
     # Load view
-    with open(f"{view_name}.json", "r") as f:
-        view = json.load(f)
+    view = load_view(
+        run_name=run_name, view_name=view_name, base_path=DATAPACKAGE_PATH
+    )
 
     # Load associated resources
     resources = {}
@@ -108,20 +113,31 @@ def view():
     for resource_name in view["resources"]:
         # Load resource into TabularDataResource object
         resources[resource_name] = load_resource(
-            resource_name, base_path=DATAPACKAGE_PATH
+            run_name=run_name,
+            resource_name=resource_name,
+            base_path=DATAPACKAGE_PATH,
         )
 
     if view["specType"] == "matplotlib":
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
-            "matplotlib_module", f"{view['specFile']}"
+            "matplotlib_module",
+            view_file_path.format(
+                base_path=DATAPACKAGE_PATH,
+                algorithm_name=algorithm_name,
+                view_file_name=view["specFile"],
+            ),
         ).load_module()
 
         # Pass resources and execute
         fig = matplotlib_module.main(**resources)
 
         # Save figure
-        figpath = f"{view_name}"
+        figpath = view_file_path.format(
+            base_path=DATAPACKAGE_PATH,
+            algorithm_name=algorithm_name,
+            view_file_name=view_name,
+        )
 
         print(f"Saving image at {figpath}.png")
         fig.savefig(f"{figpath}.png")
@@ -132,11 +148,9 @@ def view():
 
 
 if __name__ == "__main__":
-    if "RUN" in os.environ:
-        execute()
-    elif "VIEW" in os.environ:
+    if "VIEW" in os.environ and "RUN" in os.environ:
         view()
+    elif "RUN" in os.environ:
+        execute()
     else:
-        raise ValueError(
-            "Must provide either RUN or VIEW environment variables"
-        )
+        raise ValueError("RUN environment variable not provided")
