@@ -6,9 +6,11 @@ from opendatapy.datapackage import (
     write_resource,
     load_run_configuration,
     write_run_configuration,
+    load_algorithm,
     load_view,
     views_path,
     view_artefacts_path,
+    ALGORITHM_DIR,
     get_algorithm_name,
 )
 from importlib.machinery import SourceFileLoader
@@ -30,15 +32,14 @@ def execute():
     else:
         raise ValueError("RUN environment variable missing")
 
-    # Get algorithm name from run
-    algorithm_name = run_name.split(".")[0]
-
-    # Load algorithm
-    # algorithm = load_json(algorithms_path + algorithm_name + ".json")
-    # TODO Validate run config variables against algorithm signature here
+    algorithm_name = get_algorithm_name(run_name)
 
     # Load run configuration
     run = load_run_configuration(run_name, base_path=DATAPACKAGE_PATH)
+
+    # Load algorithm
+    # TODO Validate run config variables against algorithm signature here
+    algorithm = load_algorithm(algorithm_name, base_path=DATAPACKAGE_PATH)
 
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
@@ -61,7 +62,11 @@ def execute():
     # Import as "algorithm_module" here to avoid clashing with any library
     # names (e.g. bindfit.py algorithm vs. bindfit library)
     algorithm_module = SourceFileLoader(
-        "algorithm_module", f"{DATAPACKAGE_PATH}/{algorithm_name}/algorithm.py"
+        "algorithm_module",
+        ALGORITHM_DIR.format(
+            base_path=DATAPACKAGE_PATH, algorithm_name=algorithm_name
+        )
+        + f"/{algorithm['code']}",
     ).load_module()
 
     # Execute algorithm with kwargs
