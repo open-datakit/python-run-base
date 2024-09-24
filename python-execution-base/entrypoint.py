@@ -7,18 +7,12 @@ from opendatapy.datapackage import (
     write_resource,
     load_run_configuration,
     write_run_configuration,
-    RESOURCES_DIR,
-    ALGORITHMS_DIR,
-    VIEWS_DIR,
 )
 from importlib.machinery import SourceFileLoader
 
 
 # Datapackage is mounted at /datapackage in container definition
 DATAPACKAGE_PATH = os.getcwd() + "/datapackage"
-resources_path = f"{DATAPACKAGE_PATH}/{RESOURCES_DIR}"
-algorithms_path = f"{DATAPACKAGE_PATH}/{ALGORITHMS_DIR}"
-views_path = f"{DATAPACKAGE_PATH}/{VIEWS_DIR}"
 
 
 # Helpers
@@ -64,7 +58,7 @@ def execute():
     # Import as "algorithm_module" here to avoid clashing with any library
     # names (e.g. bindfit.py algorithm vs. bindfit library)
     algorithm_module = SourceFileLoader(
-        "algorithm_module", f"{algorithms_path}/{algorithm_name}.py"
+        "algorithm_module", f"{DATAPACKAGE_PATH}/{algorithm_name}/algorithm.py"
     ).load_module()
 
     # Execute algorithm with kwargs
@@ -85,7 +79,11 @@ def execute():
                 # TODO: Validate updated_resource here - check it's a valid
                 # resource of the type specified
 
-                write_resource(updated_resource, base_path=DATAPACKAGE_PATH)
+                write_resource(
+                    run_name=run_name,
+                    resource=updated_resource,
+                    base_path=DATAPACKAGE_PATH,
+                )
 
     # TODO: Validate outputs against algorithm signature - make sure they are
     # the right types
@@ -99,7 +97,7 @@ def view():
     view_name = os.environ.get("VIEW")
 
     # Load view
-    with open(f"{views_path}/{view_name}.json", "r") as f:
+    with open(f"{view_name}.json", "r") as f:
         view = json.load(f)
 
     # Load associated resources
@@ -116,14 +114,14 @@ def view():
     if view["specType"] == "matplotlib":
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
-            "matplotlib_module", f"{views_path}/{view['specFile']}"
+            "matplotlib_module", f"{view['specFile']}"
         ).load_module()
 
         # Pass resources and execute
         fig = matplotlib_module.main(**resources)
 
         # Save figure
-        figpath = f"{views_path}/{view_name}"
+        figpath = f"{view_name}"
 
         print(f"Saving image at {figpath}.png")
         fig.savefig(f"{figpath}.png")
