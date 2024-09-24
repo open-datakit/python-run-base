@@ -8,8 +8,8 @@ from opendatapy.datapackage import (
     write_run_configuration,
     load_algorithm,
     load_view,
-    views_path,
-    view_artefacts_path,
+    VIEWS_DIR,
+    VIEW_ARTEFACTS_DIR,
     ALGORITHM_DIR,
     get_algorithm_name,
 )
@@ -127,7 +127,7 @@ def view():
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
             "matplotlib_module",
-            views_path.format(
+            VIEWS_DIR.format(
                 base_path=DATAPACKAGE_PATH,
                 algorithm_name=get_algorithm_name(run_name),
             )
@@ -139,7 +139,7 @@ def view():
 
         # Save figure
         figpath = (
-            view_artefacts_path.format(
+            VIEW_ARTEFACTS_DIR.format(
                 base_path=DATAPACKAGE_PATH,
                 run_name=run_name,
             )
