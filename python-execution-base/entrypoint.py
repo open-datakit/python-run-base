@@ -1,54 +1,50 @@
-import json
 import os
 import pickle
 from opendatapy.datapackage import (
     load_resource_by_variable,
     load_resource,
     write_resource,
-    load_configuration,
-    write_configuration,
-    RESOURCES_DIR,
-    ALGORITHMS_DIR,
+    load_run_configuration,
+    write_run_configuration,
+    load_algorithm,
+    load_view,
     VIEWS_DIR,
+    VIEW_ARTEFACTS_DIR,
+    ALGORITHM_DIR,
+    get_algorithm_name,
 )
 from importlib.machinery import SourceFileLoader
 
 
 # Datapackage is mounted at /datapackage in container definition
 DATAPACKAGE_PATH = os.getcwd() + "/datapackage"
-resources_path = f"{DATAPACKAGE_PATH}/{RESOURCES_DIR}"
-algorithms_path = f"{DATAPACKAGE_PATH}/{ALGORITHMS_DIR}"
-views_path = f"{DATAPACKAGE_PATH}/{VIEWS_DIR}"
 
 
 # Helpers
 
 
 def execute():
-    """Execute algorithm with specified configuration"""
+    """Execute the specified run"""
 
     # Load requested execution parameters from env vars
-    if "CONFIGURATION" in os.environ:
-        configuration_name = os.environ.get("CONFIGURATION")
+    if "RUN" in os.environ:
+        run_name = os.environ.get("RUN")
     else:
-        raise ValueError("CONFIGURATION environment variable missing")
+        raise ValueError("RUN environment variable missing")
 
-    # Get algorithm name from configuration
-    algorithm_name = configuration_name.split(".")[0]
+    algorithm_name = get_algorithm_name(run_name)
+
+    # Load run configuration
+    run = load_run_configuration(run_name, base_path=DATAPACKAGE_PATH)
 
     # Load algorithm
-    # algorithm = load_json(algorithms_path + algorithm_name + ".json")
-    # TODO Validate configuration variables against algorithm signature here
-
-    # Load configuration
-    configuration = load_configuration(
-        configuration_name, base_path=DATAPACKAGE_PATH
-    )
+    # TODO Validate run config variables against algorithm signature here
+    algorithm = load_algorithm(algorithm_name, base_path=DATAPACKAGE_PATH)
 
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
 
-    for variable in configuration["data"]:
+    for variable in run["data"]:
         variable_name = variable["name"]
 
         if "value" in variable:
@@ -57,8 +53,8 @@ def execute():
         elif "resource" in variable:
             # Variable is a resource
             kwargs[variable_name] = load_resource_by_variable(
-                variable_name,
-                configuration_name,
+                run_name=run_name,
+                variable_name=variable_name,
                 base_path=DATAPACKAGE_PATH,
             )
 
@@ -66,14 +62,18 @@ def execute():
     # Import as "algorithm_module" here to avoid clashing with any library
     # names (e.g. bindfit.py algorithm vs. bindfit library)
     algorithm_module = SourceFileLoader(
-        "algorithm_module", f"{algorithms_path}/{algorithm_name}.py"
+        "algorithm_module",
+        ALGORITHM_DIR.format(
+            base_path=DATAPACKAGE_PATH, algorithm_name=algorithm_name
+        )
+        + f"/{algorithm['code']}",
     ).load_module()
 
     # Execute algorithm with kwargs
     result: dict = algorithm_module.main(**kwargs)
 
-    # Populate configuration resource with outputs and save
-    for variable in configuration["data"]:
+    # Populate run configuration with outputs and save
+    for variable in run["data"]:
         if variable["name"] in result.keys():
             # Update variable value or resource with algorithm output
             if "value" in variable:
@@ -87,22 +87,28 @@ def execute():
                 # TODO: Validate updated_resource here - check it's a valid
                 # resource of the type specified
 
-                write_resource(updated_resource, base_path=DATAPACKAGE_PATH)
+                write_resource(
+                    run_name=run_name,
+                    resource=updated_resource,
+                    base_path=DATAPACKAGE_PATH,
+                )
 
     # TODO: Validate outputs against algorithm signature - make sure they are
     # the right types
 
-    # Save updated configuration
-    write_configuration(configuration, base_path=DATAPACKAGE_PATH)
+    # Save updated run configuration
+    write_run_configuration(run, base_path=DATAPACKAGE_PATH)
 
 
 def view():
     """Render view in specified container"""
     view_name = os.environ.get("VIEW")
+    run_name = os.environ.get("RUN")
 
     # Load view
-    with open(f"{views_path}/{view_name}.json", "r") as f:
-        view = json.load(f)
+    view = load_view(
+        run_name=run_name, view_name=view_name, base_path=DATAPACKAGE_PATH
+    )
 
     # Load associated resources
     resources = {}
@@ -112,20 +118,33 @@ def view():
     for resource_name in view["resources"]:
         # Load resource into TabularDataResource object
         resources[resource_name] = load_resource(
-            resource_name, base_path=DATAPACKAGE_PATH
+            run_name=run_name,
+            resource_name=resource_name,
+            base_path=DATAPACKAGE_PATH,
         )
 
     if view["specType"] == "matplotlib":
         # Import matplotlib module
         matplotlib_module = SourceFileLoader(
-            "matplotlib_module", f"{views_path}/{view['specFile']}"
+            "matplotlib_module",
+            VIEWS_DIR.format(
+                base_path=DATAPACKAGE_PATH,
+                algorithm_name=get_algorithm_name(run_name),
+            )
+            + f"/{view['specFile']}",
         ).load_module()
 
         # Pass resources and execute
         fig = matplotlib_module.main(**resources)
 
         # Save figure
-        figpath = f"{views_path}/{view_name}"
+        figpath = (
+            VIEW_ARTEFACTS_DIR.format(
+                base_path=DATAPACKAGE_PATH,
+                run_name=run_name,
+            )
+            + f"/{view_name}"
+        )
 
         print(f"Saving image at {figpath}.png")
         fig.savefig(f"{figpath}.png")
@@ -136,11 +155,9 @@ def view():
 
 
 if __name__ == "__main__":
-    if "CONFIGURATION" in os.environ:
-        execute()
-    elif "VIEW" in os.environ:
+    if "VIEW" in os.environ and "RUN" in os.environ:
         view()
+    elif "RUN" in os.environ:
+        execute()
     else:
-        raise ValueError(
-            "Must provide either CONFIGURATION or VIEW environment variables"
-        )
+        raise ValueError("RUN environment variable not provided")
