@@ -44,7 +44,7 @@ def execute():
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
 
-    for variable in run["data"]:
+    for variable in run["data"]["inputs"]:
         variable_name = variable["name"]
 
         if "value" in variable:
@@ -69,11 +69,13 @@ def execute():
         + f"/{algorithm['code']}",
     ).load_module()
 
+    outputs = "HELLO WORLD"  # noqa: F841
+
     # Execute algorithm with kwargs
     result: dict = algorithm_module.main(**kwargs)
 
     # Populate run configuration with outputs and save
-    for variable in run["data"]:
+    for variable in run["data"]["outputs"]:
         if variable["name"] in result.keys():
             # Update variable value or resource with algorithm output
             if "value" in variable:
