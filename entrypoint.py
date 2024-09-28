@@ -1,9 +1,11 @@
 import os
 import pickle
+from importlib.machinery import SourceFileLoader
+
 from opendatapy.datapackage import (
     load_resource_by_variable,
     load_resource,
-    write_resource,
+    update_resource,
     load_run_configuration,
     write_run_configuration,
     load_algorithm,
@@ -13,7 +15,6 @@ from opendatapy.datapackage import (
     ALGORITHM_DIR,
     get_algorithm_name,
 )
-from importlib.machinery import SourceFileLoader
 
 
 # Datapackage is mounted at /datapackage in container definition
@@ -44,7 +45,7 @@ def execute():
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
 
-    for variable in run["data"]:
+    for variable in run["data"]["inputs"]:
         variable_name = variable["name"]
 
         if "value" in variable:
@@ -56,7 +57,7 @@ def execute():
                 run_name=run_name,
                 variable_name=variable_name,
                 base_path=DATAPACKAGE_PATH,
-            )
+            ).data
 
     # Import algorithm module
     # Import as "algorithm_module" here to avoid clashing with any library
@@ -73,7 +74,7 @@ def execute():
     result: dict = algorithm_module.main(**kwargs)
 
     # Populate run configuration with outputs and save
-    for variable in run["data"]:
+    for variable in run["data"]["outputs"]:
         if variable["name"] in result.keys():
             # Update variable value or resource with algorithm output
             if "value" in variable:
@@ -81,15 +82,14 @@ def execute():
                 variable["value"] = result[variable["name"]]
             elif "resource" in variable:
                 # Variable is a resource, update the associated resource file
-                # Get result resource
-                updated_resource = result[variable["name"]].to_dict()
+                updated_data = result[variable["name"]]
 
-                # TODO: Validate updated_resource here - check it's a valid
-                # resource of the type specified
+                # TODO: Validate updated_data against resource schema here
 
-                write_resource(
+                update_resource(
                     run_name=run_name,
-                    resource=updated_resource,
+                    resource_name=variable["resource"],
+                    data=updated_data,
                     base_path=DATAPACKAGE_PATH,
                 )
 
