@@ -1,7 +1,7 @@
 FROM python:3.11
 
 RUN mkdir -p /usr/src/app
-RUN mkdir -p /usr/src/app/datapackage
+RUN mkdir -p /usr/src/app/dataflow
 
 WORKDIR /usr/src/app
 
@@ -10,6 +10,6 @@ RUN pip install -r /tmp/requirements.txt
 
 COPY ./entrypoint.py .
 
-VOLUME /usr/src/app/datapackage
+VOLUME /usr/src/app/dataflow
 
 CMD [ "python", "./entrypoint.py" ]

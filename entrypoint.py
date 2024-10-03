@@ -2,7 +2,7 @@ import os
 import pickle
 from importlib.machinery import SourceFileLoader
 
-from opendatapy.datapackage import (
+from opendatapy.dataflow import (
     load_resource_by_variable,
     load_resource,
     update_resource,
@@ -17,8 +17,8 @@ from opendatapy.datapackage import (
 )
 
 
-# Datapackage is mounted at /datapackage in container definition
-DATAPACKAGE_PATH = os.getcwd() + "/datapackage"
+# Dataflow is mounted at /dataflow in container definition
+DATAFLOW_PATH = os.getcwd() + "/dataflow"
 
 
 # Helpers
@@ -36,11 +36,11 @@ def execute():
     algorithm_name = get_algorithm_name(run_name)
 
     # Load run configuration
-    run = load_run_configuration(run_name, base_path=DATAPACKAGE_PATH)
+    run = load_run_configuration(run_name, base_path=DATAFLOW_PATH)
 
     # Load algorithm
     # TODO Validate run config variables against algorithm signature here
-    algorithm = load_algorithm(algorithm_name, base_path=DATAPACKAGE_PATH)
+    algorithm = load_algorithm(algorithm_name, base_path=DATAFLOW_PATH)
 
     # Populate dict of key: value variable pairs to pass to function
     kwargs = {}
@@ -56,7 +56,7 @@ def execute():
             kwargs[variable_name] = load_resource_by_variable(
                 run_name=run_name,
                 variable_name=variable_name,
-                base_path=DATAPACKAGE_PATH,
+                base_path=DATAFLOW_PATH,
             ).data
 
     # Import algorithm module
@@ -65,7 +65,7 @@ def execute():
     algorithm_module = SourceFileLoader(
         "algorithm_module",
         ALGORITHM_DIR.format(
-            base_path=DATAPACKAGE_PATH, algorithm_name=algorithm_name
+            base_path=DATAFLOW_PATH, algorithm_name=algorithm_name
         )
         + f"/{algorithm['code']}",
     ).load_module()
@@ -90,14 +90,14 @@ def execute():
                     run_name=run_name,
                     resource_name=variable["resource"],
                     data=updated_data,
-                    base_path=DATAPACKAGE_PATH,
+                    base_path=DATAFLOW_PATH,
                 )
 
     # TODO: Validate outputs against algorithm signature - make sure they are
     # the right types
 
     # Save updated run configuration
-    write_run_configuration(run, base_path=DATAPACKAGE_PATH)
+    write_run_configuration(run, base_path=DATAFLOW_PATH)
 
 
 def view():
@@ -107,7 +107,7 @@ def view():
 
     # Load view
     view = load_view(
-        run_name=run_name, view_name=view_name, base_path=DATAPACKAGE_PATH
+        run_name=run_name, view_name=view_name, base_path=DATAFLOW_PATH
     )
 
     # Load associated resources
@@ -120,7 +120,7 @@ def view():
         resources[resource_name] = load_resource(
             run_name=run_name,
             resource_name=resource_name,
-            base_path=DATAPACKAGE_PATH,
+            base_path=DATAFLOW_PATH,
         )
 
     if view["specType"] == "matplotlib":
@@ -128,7 +128,7 @@ def view():
         matplotlib_module = SourceFileLoader(
             "matplotlib_module",
             VIEWS_DIR.format(
-                base_path=DATAPACKAGE_PATH,
+                base_path=DATAFLOW_PATH,
                 algorithm_name=get_algorithm_name(run_name),
             )
             + f"/{view['specFile']}",
@@ -140,7 +140,7 @@ def view():
         # Save figure
         figpath = (
             VIEW_ARTEFACTS_DIR.format(
-                base_path=DATAPACKAGE_PATH,
+                base_path=DATAFLOW_PATH,
                 run_name=run_name,
             )
             + f"/{view_name}"
