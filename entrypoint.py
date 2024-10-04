@@ -116,12 +116,12 @@ def view():
     # TODO: Handle single resource case
 
     for resource_name in view["resources"]:
-        # Load resource into TabularDataResource object
+        # Load resource data as pandas DataFrame
         resources[resource_name] = load_resource(
             run_name=run_name,
             resource_name=resource_name,
             base_path=DATAFLOW_PATH,
-        )
+        ).data
 
     if view["specType"] == "matplotlib":
         # Import matplotlib module
