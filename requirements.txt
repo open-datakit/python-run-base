@@ -1,1 +1,5 @@
 opendatapy @ git+https://github.com/opendatastudio/opendatapy@main
+numpy
+scipy
+pandas
+matplotlib
