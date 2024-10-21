@@ -17,11 +17,13 @@ All custom datakit containers must inherit from _python-run-base_.
 To run a datakit in _python-run-base_ manually:
 
 ```bash
-docker run -it -v ${DATAKIT_PATH}:/usr/src/app/datakit -e RUN=bindfit.run opends/python-run-base:v1
+docker run -it -v ${DATAKIT_PATH}:/usr/src/app/datakit -e RUN=bindfit.run opends/python-run-base:latest
 ```
 
 ### Pushing to DockerHub
 
+Ensure all version numbers are updated in `build.sh` and the correct tags are applied by `docker image ls`. Remove any old tags.
+
 ```bash
-docker push opends/python-run-base:v1
+docker image push --all-tags opends/python-run-base
 ```
