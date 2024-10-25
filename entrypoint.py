@@ -2,7 +2,7 @@ import os
 import pickle
 from importlib.machinery import SourceFileLoader
 
-from opendatapy.datakit import (
+from datakitpy.datakit import (
     load_resource_by_variable,
     load_resource,
     update_resource,

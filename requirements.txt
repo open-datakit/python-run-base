@@ -1,4 +1,4 @@
-opendatapy @ git+https://github.com/opendatastudio/opendatapy@main
+datakitpy @ git+https://github.com/open-datakit/datakitpy@main
 numpy
 scipy
 pandas
